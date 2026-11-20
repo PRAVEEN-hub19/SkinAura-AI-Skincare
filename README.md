@@ -266,3 +266,14 @@ stated scope as a preliminary/educational tool.
   acne, sensitive), add the folders and update `CLASS_NAMES` in
   `config.py` — the code auto-detects the number of classes from the
   dataset folders.
+## Application Screenshots
+
+![SkinAura 1](Screenshot%202026-11-20%20220326.png)
+
+![SkinAura 2](Screenshot%202026-11-20%20220350.png)
+
+![SkinAura 3](Screenshot%202026-11-20%20220431.png)
+
+![SkinAura 4](Screenshot%202026-11-20%20220515.png)
+
+![SkinAura 5](Screenshot%202026-11-20%20220532.png)
