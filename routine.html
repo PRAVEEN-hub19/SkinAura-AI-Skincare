@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your routine | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a class="active" href="{{ url_for('routine') }}">Routine</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> Private account</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+  <main class="shell page narrow-page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / DAILY ROUTINE</p>
+      <h1>Small rituals,<br><em>lasting momentum.</em></h1>
+      <p class="hero-copy">Check off each task as you go. Your streak and progress update when every active task for the day is complete.</p>
+    </section>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    <section class="routine-overview">
+      <div class="routine-overview-stat"><span class="routine-flame" aria-hidden="true">✦</span><strong>{{ routine.streak_count }}</strong><span>day streak</span></div>
+      <div class="routine-overview-stat"><strong>{{ routine.completed_count }} / {{ routine.total_count }}</strong><span>tasks completed today</span></div>
+      <div class="routine-overview-stat"><strong>{{ routine.week_percent }}%</strong><span>of the last 7 days complete</span></div>
+    </section>
+    <section class="panel routine-panel">
+      <div class="panel-heading"><span>TODAY</span><h2>Your daily tasks</h2></div>
+      <div class="today-progress">
+        <div class="progress-bar" role="progressbar" aria-label="Today's routine completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ routine.today_percent }}"><span style="width: {{ routine.today_percent }}%"></span></div>
+        <p class="progress-caption">{{ routine.today_percent }}% complete · {{ routine.today }}</p>
+      </div>
+      {% if routine.tasks %}
+        <ul class="routine-task-list">
+          {% for task in routine.tasks %}
+            <li class="routine-task {% if task.completed %}is-complete{% endif %}">
+              <form method="post" action="{{ url_for('complete_routine_task', task_id=task.id) }}" class="task-toggle-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="completed" value="{{ 'false' if task.completed else 'true' }}">
+                <button class="task-toggle" type="submit" aria-label="{{ 'Mark incomplete' if task.completed else 'Mark complete' }}: {{ task.task_name }}" aria-pressed="{{ 'true' if task.completed else 'false' }}">{{ '✓' if task.completed else '' }}</button>
+              </form>
+              <span class="task-name">{{ task.task_name }}</span>
+              <form method="post" action="{{ url_for('remove_routine_task', task_id=task.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="remove-task" type="submit" aria-label="Remove {{ task.task_name }}">Remove</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">No tasks are planned yet. Add your first daily routine step below.</p>
+      {% endif %}
+      {% if routine.total_count and routine.completed_count == routine.total_count %}
+        <p class="routine-complete-message" role="status">Your full routine is complete for today. Lovely consistency.</p>
+      {% endif %}
+      <form method="post" class="add-task-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="visually-hidden" for="task-name">New daily task</label>
+        <input id="task-name" name="task_name" type="text" maxlength="120" placeholder="Add a daily task, e.g. Apply SPF" required>
+        <button class="secondary-button" type="submit">Add task</button>
+      </form>
+      <p class="field-hint">Your starter tasks are based on your {{ profile_key }} profile. Remove or add tasks to make the plan your own.</p>
+    </section>
+    <section class="panel weekly-panel">
+      <div class="panel-heading"><span>LAST 7 DAYS</span><h2>Your consistency</h2></div>
+      <p class="muted">{{ routine.week_count }} of the last 7 days fully completed.</p>
+      <div class="week-dots" aria-label="{{ routine.week_count }} of 7 days completed">
+        {% for day in routine.week_days %}
+          <span class="week-day">
+            <span class="week-dot {% if day.completed %}complete{% endif %}" title="{{ day.date }}"></span>
+            <small>{{ day.date[5:] }}</small>
+          </span>
+        {% endfor %}
+      </div>
+    </section>
+    <footer><span>Progress reflects completed routine tasks, not a medical measure of skin health.</span><span>SkinAura · educational prototype</span></footer>
+  </main>
+</body>
+</html>

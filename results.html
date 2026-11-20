@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your results | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a href="{{ url_for('routine') }}">Routine</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> Private account</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="shell page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / YOUR RESULTS</p>
+      <h1>Your skin, understood.<br><em>Your routine, made personal.</em></h1>
+      <p class="hero-copy">These suggestions are an educational starting point, not a diagnosis.</p>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="notice {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="panel result-panel results-panel">
+      <div class="panel-heading"><span>01</span><h2>Your skin profile</h2></div>
+      <div class="profile-result">
+        <div class="result-topline">
+          <div>
+            <p class="result-kicker">{{ 'SELECTED PROFILE' if result.manual_profile else 'PHOTO ESTIMATE' }}</p>
+            <h3>{{ result.label }}</h3>
+          </div>
+          <div class="score"><strong>{{ '%.1f'|format(result.confidence) }}%</strong><span>photo-model confidence</span></div>
+        </div>
+        <div class="meter"><span style="width: {{ [result.confidence, 100]|min }}%"></span></div>
+        <div class="class-breakdown" aria-label="Photo model class scores">
+          <p class="result-kicker">IMAGE MATCHES</p>
+          {% for match in result.prediction_breakdown %}
+            <div class="class-score"><span>{{ match.label.title() }}</span><strong>{{ '%.1f'|format(match.confidence) }}%</strong></div>
+            <div class="class-meter"><span style="width: {{ [match.confidence, 100]|min }}%"></span></div>
+          {% endfor %}
+        </div>
+        {% if result.manual_profile %}<p class="profile-origin">Self-assessed profile. The image model estimated {{ result.predicted_label }}.</p>{% endif %}
+        {% if result.model_warning %}<div class="model-warning">{{ result.model_warning }}</div>{% endif %}
+        {% if result.is_uncertain %}<div class="confidence-note">The photo estimate is low confidence. Try a clearer, evenly lit front-facing image.</div>{% endif %}
+        <p class="summary">{{ result.recommendation.summary }}</p>
+        <div class="recommendation-grid">
+          <div class="recommendation-block">
+            <p class="result-kicker">PRODUCTS FOR {{ result.label|upper }} · {{ weather_label|upper }}</p>
+            <ul class="product-links">
+              {% for product in result.products %}
+              <li class="product-item">
+                <a href="{{ product.url }}" target="_blank" rel="noopener noreferrer">{{ product.name }} ↗</a>
+                <label><input class="product-check" type="checkbox" data-product-key="{{ product.key }}" {% if product.checked %}checked{% endif %}> Got it</label>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="recommendation-block"><p class="result-kicker">MORNING TASKS</p><ul>{% for task in result.recommendation.morning_tasks %}<li>{{ task }}</li>{% endfor %}</ul></div>
+          <div class="recommendation-block"><p class="result-kicker">EVENING TASKS</p><ul>{% for task in result.recommendation.evening_tasks %}<li>{{ task }}</li>{% endfor %}</ul></div>
+          <div class="recommendation-block"><p class="result-kicker">DAILY NOTES</p><ul>{% for tip in result.recommendation.tips %}<li>{{ tip }}</li>{% endfor %}</ul></div>
+          <div class="recommendation-block"><p class="result-kicker">HYDRATION</p><p>{{ result.recommendation.hydration_message }}</p></div>
+          <div class="recommendation-block"><p class="result-kicker">BALANCED EATING</p><ul>{% for tip in result.recommendation.diet_tips %}<li>{{ tip }}</li>{% endfor %}</ul></div>
+        </div>
+        <span class="streak-status" id="product-status" aria-live="polite"></span>
+        <div class="weather-note"><p class="result-kicker">WEATHER · {{ weather_label }}</p><p>{{ result.weather_advice }}</p></div>
+        <form class="report-form" method="post" action="{{ url_for('download_report') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="profile" value="{{ result.profile_key }}">
+          <input type="hidden" name="predicted_label" value="{{ result.predicted_label }}">
+          <input type="hidden" name="confidence" value="{{ result.confidence }}">
+          <input type="hidden" name="weather" value="{{ selected_weather }}">
+          <button class="secondary-button" type="submit">Download skin analysis report (PDF)</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="aftercare shell-inner">
+      <div><p class="eyebrow">A GENTLE REMINDER</p><h2>Listen to your skin over time.</h2><p class="muted">Your photo is processed in memory and is not saved. Notice patterns, keep your routine consistent, and speak with a dermatologist about persistent concerns.</p></div>
+    </section>
+    <div class="results-actions">
+      <a class="primary-button chat-cta-btn" href="{{ url_for('skin_chat') }}"><span>✦ Ask SkinAura AI about your results</span><span aria-hidden="true">→</span></a>
+      <a class="secondary-button" href="{{ url_for('index') }}">Analyze another photo</a>
+    </div>
+
+    <footer><span>{{ disclaimer }}</span><span>SkinAura · educational prototype</span></footer>
+  </main>
+  <script>
+    const csrfToken = {{ csrf_token|tojson }};
+    const productStatus = document.getElementById('product-status');
+    document.querySelectorAll('.product-check').forEach(checkbox => {
+      checkbox.addEventListener('change', async () => {
+        const desiredState = checkbox.checked;
+        checkbox.disabled = true;
+        productStatus.textContent = 'Saving product update...';
+        try {
+          const body = new URLSearchParams({
+            csrf_token: csrfToken,
+            product_key: checkbox.dataset.productKey,
+            checked: String(desiredState)
+          });
+          const response = await fetch('{{ url_for("update_product_check") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+            body
+          });
+          if (!response.ok) throw new Error('Could not save this product update. Try again.');
+          checkbox.disabled = false;
+          productStatus.textContent = '';
+        } catch (error) {
+          checkbox.checked = !desiredState;
+          checkbox.disabled = false;
+          productStatus.textContent = error.message;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

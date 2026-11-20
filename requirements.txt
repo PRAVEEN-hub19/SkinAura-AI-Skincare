@@ -1,0 +1,11 @@
+tensorflow-cpu
+optree
+numpy
+pillow
+matplotlib
+customtkinter
+streamlit
+Flask
+werkzeug
+python-dotenv
+groq

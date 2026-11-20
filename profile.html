@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your profile | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a href="{{ url_for('routine') }}">Routine</a>
+      <a class="active" href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> Private account</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+  <main class="shell page narrow-page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / YOUR PROFILE</p>
+      <h1>A little more<br><em>about you.</em></h1>
+      <p class="hero-copy">Personalize the name we use and the starting profile for your skincare recommendations.</p>
+    </section>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    <section class="panel profile-panel">
+      <div class="panel-heading"><span>01</span><h2>Profile details</h2></div>
+      <form method="post" class="profile-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="display-name">Name</label>
+        <input id="display-name" name="display_name" type="text" maxlength="60" value="{{ user.display_name }}" placeholder="What should we call you?">
+        <label for="profile-email">Account email</label>
+        <input id="profile-email" type="email" value="{{ user.email }}" readonly>
+        <p class="field-hint">Email is used to sign in and cannot be changed here.</p>
+        <label for="skin-profile">Starting skin profile</label>
+        <select id="skin-profile" name="skin_profile">
+          {% for value, label in profile_choices.items() %}
+            <option value="{{ value }}" {% if user.skin_profile == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <p class="field-hint">Choose a profile yourself or use the estimate from your latest photo analysis.</p>
+        <label for="skin-goal">Personal skincare goal</label>
+        <textarea id="skin-goal" name="skin_goal" maxlength="180" rows="3" placeholder="For example: keep my routine simple">{{ user.skin_goal }}</textarea>
+        <p class="field-hint">Optional. This is a personal reminder and does not change medical advice.</p>
+        <button class="primary-button" type="submit"><span>Save profile</span><span>→</span></button>
+      </form>
+    </section>
+    <footer><span>{{ disclaimer }}</span><span>SkinAura · educational prototype</span></footer>
+  </main>
+</body>
+</html>

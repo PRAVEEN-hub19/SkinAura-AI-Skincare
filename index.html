@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkinAura | Personal skin intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a class="active" href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a href="{{ url_for('routine') }}">Routine</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> {{ session.get('user_id') and 'Private account' or 'Local image analysis' }}</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="shell page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / PERSONAL ANALYSIS</p>
+      <h1>Understand your skin.<br><em>Care for it with intention.</em></h1>
+      <p class="hero-copy">A considered starting point for a better daily routine, powered by your trained skin-type model.</p>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="notice {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="workspace">
+      <div class="panel upload-panel">
+        <div class="panel-heading"><span>01</span><h2>Bring your photo</h2></div>
+        <p class="muted">A clear, front-facing image gives the model the best available starting point.</p>
+        <form method="post" action="{{ url_for('analyze_skin') }}" enctype="multipart/form-data" id="analysis-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="source-switch" role="group" aria-label="Photo source">
+            <button class="source-button active" type="button" data-source="upload">Upload image</button>
+            <button class="source-button" type="button" data-source="camera">Use camera</button>
+          </div>
+          <div id="upload-source">
+          <label class="dropzone" for="photo-input" id="dropzone">
+            <div class="drop-icon">+</div>
+            <strong id="file-label">Choose a face image</strong>
+            <span>JPG, PNG, WEBP or BMP · up to 8 MB</span>
+            <input id="photo-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/bmp" required>
+          </label>
+          <div class="upload-preview" id="upload-preview" hidden>
+            <img id="selected-image" alt="Selected face preview">
+            <div><strong id="selected-name"></strong><span>Ready for local analysis</span></div>
+          </div>
+          </div>
+          <div class="camera-source" id="camera-source" hidden>
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-canvas" hidden></canvas>
+            <p class="camera-status" id="camera-status">Camera preview will appear here.</p>
+            <button class="camera-button" id="capture-button" type="button">Capture photo</button>
+            <div class="camera-preview" id="camera-preview" hidden>
+              <img id="captured-image" alt="Captured face preview">
+              <button class="secondary-button" id="retake-button" type="button">Retake</button>
+            </div>
+          </div>
+          <input id="camera-data" name="camera_data" type="hidden">
+          <label class="weather-control" for="skin-profile">Profile for suggestions</label>
+          <select id="skin-profile" name="skin_profile">
+            {% for value, label in profile_options.items() %}
+              <option value="{{ value }}" {% if selected_profile == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <label class="weather-control" for="weather-condition">Today's weather</label>
+          <select id="weather-condition" name="weather_condition">
+            {% for value, label in [('sunny-hot', 'Sunny and hot'), ('cold-windy', 'Cold and windy'), ('dry-air', 'Dry air / indoor heating'), ('humid', 'Humid'), ('mild', 'Mild weather')] %}
+              <option value="{{ value }}" {% if selected_weather == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button class="primary-button" type="submit"><span>Analyze my skin</span><span>→</span></button>
+          <label class="privacy-consent"><input type="checkbox" name="privacy_consent" value="yes" required> I agree to process this image for this analysis only.</label>
+        </form>
+        <p class="privacy"><span>◌</span> Images are validated and processed in memory. SkinAura does not save uploaded photos or include them in reports.</p>
+      </div>
+
+      <div class="panel result-panel">
+        <div class="panel-heading"><span>02</span><h2>Your personalized guide</h2></div>
+        <div class="empty-result">
+          <div class="empty-orbit">S</div>
+          <h3>One thoughtful step at a time</h3>
+          <p>After you submit your photo, your skin profile, confidence scores, product ideas, and daily routine will open on a separate results page.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="progress-panel" aria-labelledby="progress-title">
+      <div class="progress-intro">
+        <p class="eyebrow">SMALL STEPS, OFTEN</p>
+        <h2 id="progress-title">Your skin progress</h2>
+        <p class="muted">Progress is based on the daily skincare tasks you complete.</p>
+        <a class="secondary-button" href="{{ url_for('routine') }}">Open my routine <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="progress-stats">
+        <div class="progress-stat"><strong>{{ routine.streak_count }}</strong><span>day streak</span></div>
+        <div class="progress-stat"><strong>{{ routine.completed_count }} / {{ routine.total_count }}</strong><span>tasks today</span></div>
+        <div class="progress-stat"><strong>{{ routine.week_count }} / 7</strong><span>days completed this week</span></div>
+        <div class="progress-bar" role="progressbar" aria-label="Routine completion over the last seven days" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ routine.week_percent }}"><span style="width: {{ routine.week_percent }}%"></span></div>
+        <p class="progress-caption">{{ routine.week_percent }}% of your routine days complete this week</p>
+      </div>
+    </section>
+
+    <section class="aftercare shell-inner">
+      <div><p class="eyebrow">A GENTLE REMINDER</p><h2>Listen to your skin over time.</h2><p class="muted">One image is a useful starting point, not a diagnosis. Notice patterns, keep your routine consistent, and speak with a dermatologist about persistent concerns.</p></div>
+    </section>
+
+    <footer><span>{{ disclaimer }}</span><span>SkinAura · educational prototype</span></footer>
+  </main>
+  <script>
+    const input = document.getElementById('photo-input');
+    const dropzone = document.getElementById('dropzone');
+    const preview = document.getElementById('upload-preview');
+    const previewImage = document.getElementById('selected-image');
+    const selectedName = document.getElementById('selected-name');
+    const fileLabel = document.getElementById('file-label');
+    const uploadSource = document.getElementById('upload-source');
+    const cameraSource = document.getElementById('camera-source');
+    const cameraVideo = document.getElementById('camera-video');
+    const cameraCanvas = document.getElementById('camera-canvas');
+    const cameraData = document.getElementById('camera-data');
+    const cameraStatus = document.getElementById('camera-status');
+    const captureButton = document.getElementById('capture-button');
+    const cameraPreview = document.getElementById('camera-preview');
+    const capturedImage = document.getElementById('captured-image');
+    const retakeButton = document.getElementById('retake-button');
+    let cameraStream;
+
+    function stopCamera() {
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      cameraVideo.srcObject = null;
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        cameraStatus.textContent = 'Camera access is unavailable in this browser. Use Upload image instead.';
+        captureButton.disabled = true;
+        return;
+      }
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        cameraVideo.srcObject = cameraStream;
+        cameraStatus.textContent = 'Center your face in the frame, then capture.';
+        captureButton.disabled = false;
+      } catch (error) {
+        cameraStatus.textContent = 'Camera permission was not granted. You can still upload an image.';
+        captureButton.disabled = true;
+      }
+    }
+
+    document.querySelectorAll('.source-button').forEach(button => button.addEventListener('click', () => {
+      const cameraMode = button.dataset.source === 'camera';
+      document.querySelectorAll('.source-button').forEach(item => item.classList.toggle('active', item === button));
+      uploadSource.hidden = cameraMode;
+      cameraSource.hidden = !cameraMode;
+      input.required = !cameraMode;
+      if (cameraMode) startCamera(); else stopCamera();
+    }));
+
+    captureButton.addEventListener('click', () => {
+      if (!cameraVideo.videoWidth) return;
+      cameraCanvas.width = cameraVideo.videoWidth;
+      cameraCanvas.height = cameraVideo.videoHeight;
+      cameraCanvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      cameraData.value = cameraCanvas.toDataURL('image/jpeg', 0.9);
+      capturedImage.src = cameraData.value;
+      cameraPreview.hidden = false;
+      captureButton.hidden = true;
+      cameraStatus.textContent = 'Capture ready for local analysis.';
+    });
+
+    retakeButton.addEventListener('click', () => {
+      cameraData.value = '';
+      cameraPreview.hidden = true;
+      captureButton.hidden = false;
+      cameraStatus.textContent = 'Center your face in the frame, then capture.';
+    });
+
+    document.getElementById('analysis-form').addEventListener('submit', () => stopCamera());
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      previewImage.src = URL.createObjectURL(file);
+      selectedName.textContent = file.name;
+      fileLabel.textContent = 'Image selected';
+      preview.hidden = false;
+      dropzone.classList.add('has-file');
+    });
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('signup') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="nav-meta"><span class="status-dot"></span> Local account</div>
+  </nav>
+  <main class="auth-shell">
+    <section class="panel auth-panel">
+      <p class="eyebrow">YOUR PRIVATE WORKSPACE</p>
+      <h1>Create account</h1>
+      <p class="muted">Save your product checklist and routine streak on this computer.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="notice {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form method="post" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+        <span class="field-hint">Use at least 8 characters. Passwords are stored as hashes.</span>
+        <button class="primary-button" type="submit"><span>Create my account</span><span>→</span></button>
+      </form>
+      <p class="auth-switch">Already registered? <a href="{{ url_for('login') }}">Log in</a></p>
+      <p class="privacy">Local accounts are for this single-computer prototype, not a hosted multi-user service.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recommendations | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a href="{{ url_for('index') }}">Home</a>
+      <a class="active" href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a href="{{ url_for('routine') }}">Routine</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> Private account</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+  <main class="shell page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / PERSONAL RECOMMENDATIONS</p>
+      <h1>Your everyday care,<br><em>thoughtfully chosen.</em></h1>
+      <p class="hero-copy">A gentle guide tailored to your {{ profile_key }} profile and {{ weather_label|lower }}. Use what feels comfortable for your skin.</p>
+    </section>
+    <section class="recommendation-summary">
+      <div><p class="result-kicker">YOUR CURRENT PROFILE</p><strong>{{ profile_key|title }}</strong></div>
+      <div><p class="result-kicker">WEATHER CONTEXT</p><strong>{{ weather_label }}</strong></div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a class="secondary-button" href="{{ url_for('skin_chat') }}">✦ Ask SkinAura AI</a>
+        <a class="secondary-button" href="{{ url_for('index') }}">Update with photo analysis</a>
+      </div>
+    </section>
+    <p class="summary recommendation-lead">{{ recommendation.summary }}</p>
+    <section class="recommendation-grid recommendation-page-grid">
+      <div class="recommendation-block">
+        <p class="result-kicker">PRODUCT IDEAS</p>
+        <ul class="product-links">
+          <li><a href="{{ recommendation.product_a_url }}" target="_blank" rel="noopener noreferrer">{{ recommendation.product_a }} ↗</a></li>
+          <li><a href="{{ recommendation.product_b_url }}" target="_blank" rel="noopener noreferrer">{{ recommendation.product_b }} ↗</a></li>
+        </ul>
+        <p class="field-hint">Product examples only. Check ingredients and patch-test new products.</p>
+      </div>
+      <div class="recommendation-block">
+        <p class="result-kicker">MORNING ROUTINE</p>
+        <ol>{% for task in recommendation.morning_tasks %}<li>{{ task }}</li>{% endfor %}</ol>
+      </div>
+      <div class="recommendation-block">
+        <p class="result-kicker">EVENING ROUTINE</p>
+        <ol>{% for task in recommendation.evening_tasks %}<li>{{ task }}</li>{% endfor %}</ol>
+      </div>
+      <div class="recommendation-block">
+        <p class="result-kicker">SKINCARE NOTES</p>
+        <ul>{% for tip in recommendation.tips %}<li>{{ tip }}</li>{% endfor %}</ul>
+      </div>
+      <div class="recommendation-block">
+        <p class="result-kicker">HYDRATION</p><p>{{ recommendation.hydration_message }}</p>
+      </div>
+      <div class="recommendation-block">
+        <p class="result-kicker">BALANCED EATING</p>
+        <ul>{% for tip in recommendation.diet_tips %}<li>{{ tip }}</li>{% endfor %}</ul>
+      </div>
+      <div class="recommendation-block weather-recommendation">
+        <p class="result-kicker">WEATHER CARE · {{ weather_label }}</p><p>{{ weather_advice }}</p>
+      </div>
+    </section>
+    <section class="aftercare shell-inner">
+      <div><p class="eyebrow">A GENTLE REMINDER</p><h2>Keep it simple and steady.</h2><p class="muted">These educational suggestions are not a diagnosis or treatment plan. Stop using products that cause irritation and contact a dermatologist about persistent or severe concerns.</p></div>
+    </section>
+    <div class="results-actions"><a class="secondary-button" href="{{ url_for('routine') }}">Track my routine</a></div>
+    <footer><span>{{ disclaimer }}</span><span>SkinAura · educational prototype</span></footer>
+  </main>
+</body>
+</html>

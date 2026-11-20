@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skin AI chat | SkinAura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <nav class="nav shell">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">S</span> SkinAura</a>
+    <div class="main-nav">
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('recommendations') }}">Recommendations</a>
+      <a class="active" href="{{ url_for('skin_chat') }}">AI chat</a>
+      <a href="{{ url_for('routine') }}">Routine</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+    </div>
+    <div class="account-nav">
+      <div class="nav-meta"><span class="status-dot"></span> Private account</div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="shell page narrow-page">
+    <section class="hero">
+      <p class="eyebrow">SKINAURA / SKINCARE INTELLIGENCE</p>
+      <h1>Ask about your skin.<br><em>Personalized AI Guidance.</em></h1>
+      <p class="hero-copy">Get tailored answers on routines, active ingredients, and barrier health, calibrated to your active skin profile and local weather.</p>
+    </section>
+
+    <!-- Context Badges -->
+    <div class="chat-context-badges" aria-label="Active skincare context">
+      <span class="context-badge profile-badge">
+        <i class="badge-icon">✦</i>
+        <strong>{{ context.profile_key|title }} skin</strong>
+        <small>({{ context.profile_origin }})</small>
+      </span>
+      <span class="context-badge weather-badge">
+        <i class="badge-icon">🌤</i>
+        <span>Weather: <strong>{{ context.weather_label }}</strong></span>
+      </span>
+      {% if context.skin_goal %}
+      <span class="context-badge goal-badge">
+        <i class="badge-icon">🎯</i>
+        <span>Goal: <strong>{{ context.skin_goal }}</strong></span>
+      </span>
+      {% endif %}
+    </div>
+
+    <section class="panel chat-panel" aria-label="Skincare AI chat">
+      {% if not groq_configured %}
+        <div class="chat-config-notice" role="status">
+          AI chat needs a Groq API key. Set <code>GROQ_API_KEY</code> in the project <code>.env</code> file. Your key is kept secure on the server.
+        </div>
+      {% endif %}
+
+      <div class="chat-toolbar">
+        <div class="chat-status-wrap">
+          <span class="pulse-indicator" aria-hidden="true"></span>
+          <div>
+            <p class="result-kicker">SKINAURA AI COMPANION</p>
+            <span class="chat-profile">Trained on gentle skin barrier science</span>
+          </div>
+        </div>
+        <button type="button" class="text-button new-chat-btn" id="new-chat">
+          <span aria-hidden="true">↺</span> New conversation
+        </button>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="chat-suggestions" id="chat-suggestions">
+        <span class="suggestion-label">Suggested for your profile:</span>
+        <div class="suggestion-chips-grid">
+          {% for prompt in suggested_prompts %}
+            <button type="button" class="suggestion-chip" data-prompt="{{ prompt }}">{{ prompt }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="chat-bubble assistant-bubble">
+          <div class="bubble-header">
+            <span class="bot-badge">SkinAura AI</span>
+          </div>
+          <div class="bubble-content">
+            <p>Hello{% if context.user_name %} <strong>{{ context.user_name }}</strong>{% endif %}! I'm your SkinAura skincare assistant, tuned to your <strong>{{ context.profile_key|title }}</strong> skin profile in <strong>{{ context.weather_label|lower }}</strong>.</p>
+            <p>Ask me anything about daily routines, active ingredients (like Salicylic Acid, Niacinamide, or Ceramides), sunscreen selection, or adapting your skin care.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-error" id="chat-error" role="alert" hidden></div>
+
+      <form class="chat-form" id="chat-form">
+        <div class="chat-input-wrapper">
+          <textarea id="chat-input" name="message" rows="2" maxlength="2000" placeholder="Ask about ingredients, your routine, or skin concerns... (Press Enter to send)" autocomplete="off" required></textarea>
+        </div>
+        <button class="primary-button" id="chat-send" type="submit">
+          <span>Send</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </form>
+      <p class="field-hint chat-disclaimer">Educational guidance only, not a medical diagnosis or prescription. Always patch-test new products and consult a dermatologist for persistent concerns.</p>
+    </section>
+
+    <!-- Verified Product Recommendations Card -->
+    <section class="panel chat-products" aria-labelledby="chat-products-title">
+      <div class="panel-heading">
+        <span>VERIFIED PRODUCTS</span>
+        <h2 id="chat-products-title">For your {{ context.profile_key|title }} profile</h2>
+      </div>
+      <p class="muted">Gentle, dermatologist-developed formulas matched to your profile and weather. Always patch test before first use.</p>
+      <ul class="chat-product-list" id="chat-products">
+        {% for product in products %}
+          <li>
+            <a href="{{ product.url }}" target="_blank" rel="noopener noreferrer">
+              <strong>{{ product.name }}</strong>
+              <span class="product-link-arrow">Visit brand page ↗</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+      <div id="answer-products" class="answer-products" aria-live="polite"></div>
+    </section>
+
+    <footer>
+      <span>{{ disclaimer }}</span>
+      <span>SkinAura · educational prototype</span>
+    </footer>
+  </main>
+
+  <script>
+    const csrfToken = {{ csrf_token|tojson }};
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatSend = document.getElementById('chat-send');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatError = document.getElementById('chat-error');
+    const answerProducts = document.getElementById('answer-products');
+    const history = [];
+
+    // Safe Markdown Formatter
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatMarkdown(text) {
+      const lines = text.split('\n');
+      let html = '';
+      let inUl = false;
+      let inOl = false;
+
+      lines.forEach(rawLine => {
+        const trimmed = rawLine.trim();
+
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          if (inOl) { html += '</ol>'; inOl = false; }
+          if (!inUl) { html += '<ul>'; inUl = true; }
+          const content = escapeHtml(trimmed.slice(2))
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>');
+          html += `<li>${content}</li>`;
+        } else if (/^\d+\.\s+/.test(trimmed)) {
+          if (inUl) { html += '</ul>'; inUl = false; }
+          if (!inOl) { html += '<ol>'; inOl = true; }
+          const itemText = trimmed.replace(/^\d+\.\s+/, '');
+          const content = escapeHtml(itemText)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>');
+          html += `<li>${content}</li>`;
+        } else {
+          if (inUl) { html += '</ul>'; inUl = false; }
+          if (inOl) { html += '</ol>'; inOl = false; }
+
+          if (trimmed === '' || trimmed === '---') {
+            html += '<div class="content-divider"></div>';
+          } else if (trimmed.startsWith('### ')) {
+            html += `<h4 class="chat-subhead">${escapeHtml(trimmed.slice(4))}</h4>`;
+          } else if (trimmed.startsWith('## ')) {
+            html += `<h3 class="chat-subhead">${escapeHtml(trimmed.slice(3))}</h3>`;
+          } else {
+            const content = escapeHtml(trimmed)
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+              .replace(/\*(.*?)\*/g, '<em>$1</em>')
+              .replace(/`(.*?)`/g, '<code>$1</code>');
+            html += `<p>${content}</p>`;
+          }
+        }
+      });
+
+      if (inUl) html += '</ul>';
+      if (inOl) html += '</ol>';
+      return html;
+    }
+
+    function addMessage(role, content, isPending = false) {
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'assistant-bubble'}${isPending ? ' pending-bubble' : ''}`;
+      
+      const header = document.createElement('div');
+      header.className = 'bubble-header';
+      header.innerHTML = role === 'user'
+        ? '<span class="user-badge">You</span>'
+        : '<span class="bot-badge">SkinAura AI</span>';
+      bubble.appendChild(header);
+
+      const contentBox = document.createElement('div');
+      contentBox.className = 'bubble-content';
+      if (role === 'assistant' && !isPending) {
+        contentBox.innerHTML = formatMarkdown(content);
+      } else if (isPending) {
+        contentBox.innerHTML = '<span class="typing-indicator"><span></span><span></span><span></span></span> Thinking...';
+      } else {
+        const p = document.createElement('p');
+        p.textContent = content;
+        contentBox.appendChild(p);
+      }
+      bubble.appendChild(contentBox);
+
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return bubble;
+    }
+
+    function showProductLinks(products) {
+      answerProducts.replaceChildren();
+      if (!Array.isArray(products) || products.length === 0) return;
+      const heading = document.createElement('p');
+      heading.className = 'result-kicker';
+      heading.textContent = 'RECOMMENDED IN THIS ANSWER';
+      const list = document.createElement('ul');
+      list.className = 'chat-product-list';
+      products.forEach(product => {
+        if (typeof product.name !== 'string' || typeof product.url !== 'string' || !product.url.startsWith('https://')) return;
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = product.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.innerHTML = `<strong>${escapeHtml(product.name)}</strong><span class="product-link-arrow">View product ↗</span>`;
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      if (list.childElementCount) answerProducts.append(heading, list);
+    }
+
+    async function submitChat() {
+      const message = chatInput.value.trim();
+      if (!message || chatSend.disabled) return;
+      chatError.hidden = true;
+      addMessage('user', message);
+      chatInput.value = '';
+      chatSend.disabled = true;
+      const pending = addMessage('assistant', '', true);
+
+      try {
+        const response = await fetch('{{ url_for("skin_chat_api") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({ message, history: history.slice(-10) })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          console.error('SkinAura chat request failed:', { status: response.status, error: data.error });
+          throw new Error(data.error || 'The skincare assistant could not respond. Please try again.');
+        }
+
+        // Replace pending bubble with formatted answer
+        pending.classList.remove('pending-bubble');
+        const contentBox = pending.querySelector('.bubble-content');
+        contentBox.innerHTML = formatMarkdown(data.answer);
+
+        showProductLinks(data.products);
+        history.push({ role: 'user', content: message }, { role: 'assistant', content: data.answer });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } catch (error) {
+        console.error('SkinAura chat error:', error);
+        pending.remove();
+        chatError.textContent = error.message;
+        chatError.hidden = false;
+        chatInput.value = message;
+      } finally {
+        chatSend.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    chatForm.addEventListener('submit', event => {
+      event.preventDefault();
+      submitChat();
+    });
+
+    // Enter key sends, Shift+Enter inserts newline
+    chatInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        submitChat();
+      }
+    });
+
+    // Click on suggestion chips
+    document.querySelectorAll('.suggestion-chip').forEach(button => {
+      button.addEventListener('click', () => {
+        chatInput.value = button.dataset.prompt;
+        submitChat();
+      });
+    });
+
+    // New conversation reset
+    document.getElementById('new-chat').addEventListener('click', () => {
+      history.length = 0;
+      chatMessages.replaceChildren();
+      answerProducts.replaceChildren();
+      chatError.hidden = true;
+      addMessage(
+        'assistant',
+        'Conversation refreshed. What else would you like to explore about your skin routine or ingredients?'
+      );
+      chatInput.focus();
+    });
+  </script>
+</body>
+</html>
